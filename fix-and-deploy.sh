@@ -11,7 +11,32 @@ echo "========================================="
 echo ""
 
 # Navigate to project directory
-cd /Users/psyunix/Documents/git/claude/ansible/webapp-ansible-k8s
+# Allow overriding the project directory using the PROJECT_DIR env var
+# or the first script argument. Otherwise detect macOS vs Linux and
+# choose a sensible default path for each.
+if [ -n "$1" ]; then
+    PROJECT_DIR="$1"
+elif [ -n "$PROJECT_DIR" ]; then
+    PROJECT_DIR="$PROJECT_DIR"
+else
+    case "$(uname -s)" in
+        Darwin)
+            # macOS default path
+            PROJECT_DIR="/Users/psyunix/Documents/git/claude/ansible/webapp-ansible-k8s"
+            ;;
+        Linux)
+            # Linux default path
+            PROJECT_DIR="/home/mcvetic/git/webapp-ansible-k8s"
+            ;;
+        *)
+            echo "Unsupported OS '$(uname -s)'. Please set PROJECT_DIR or pass the project path as the first argument."
+            exit 1
+            ;;
+    esac
+fi
+
+echo "Using project directory: $PROJECT_DIR"
+cd "$PROJECT_DIR"
 
 echo "Step 1: Building Docker image locally..."
 docker build -t webapp:latest ./app
