@@ -277,6 +277,8 @@ kubectl create secret docker-registry ghcr-secret \
 
 ## 📚 Documentation
 
+- **[HOW_IT_WORKS.md](HOW_IT_WORKS.md)** - **NEW!** Complete explanation of how this repository works
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - **NEW!** Detailed architecture diagrams and data flows
 - **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Step-by-step deployment instructions
 - **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions
 - **[PROJECT_SUMMARY.md](PROJECT_SUMMARY.md)** - Architecture and overview
