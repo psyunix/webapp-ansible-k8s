@@ -2,8 +2,8 @@
 # Application Configuration
 app_name: webapp
 app_version: "{{ lookup('env', 'APP_VERSION') | default('latest', true) }}"
-docker_registry: ghcr.io
-docker_image: "{{ docker_registry }}/psyunix/{{ app_name }}"
+docker_registry: ""
+docker_image: "{{ app_name }}"
 
 # Kubernetes Configuration
 k8s_namespace: webapp

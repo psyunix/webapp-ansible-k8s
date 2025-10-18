@@ -29,7 +29,7 @@ spec:
       containers:
       - name: {{ app_name }}
         image: {{ docker_image }}:{{ app_version }}
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: {{ container_port }}
           name: http
