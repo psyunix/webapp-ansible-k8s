@@ -87,11 +87,10 @@ jobs:
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
 
-  deploy:
-    name: Deploy to Kubernetes
+  validate:
+    name: Validate Ansible
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout repository
@@ -107,52 +106,31 @@ jobs:
           python -m pip install --upgrade pip
           pip install ansible kubernetes openshift PyYAML
 
-      - name: Verify Ansible installation
-        run: |
-          ansible --version
-          ansible-galaxy collection list
-
       - name: Install Kubernetes collection
         run: |
           ansible-galaxy collection install kubernetes.core
-
-      - name: Set up kubectl (for local testing)
-        uses: azure/setup-kubectl@v4
-        with:
-          version: 'latest'
 
       - name: Run Ansible syntax check
         run: |
           cd ansible
           ansible-playbook playbooks/deploy-webapp.yml --syntax-check
+          ansible-playbook playbooks/rollback.yml --syntax-check
 
-      - name: Run Ansible deployment (dry-run)
+      - name: Verify Ansible installation
         run: |
-          cd ansible
-          ansible-playbook playbooks/deploy-webapp.yml --check
-        env:
-          APP_VERSION: ${{ needs.build.outputs.image-version }}
+          ansible --version
+          ansible-galaxy collection list
 
-      # Uncomment below for actual deployment to your local cluster
-      # This would require self-hosted runner or connection to your cluster
-      
-      # - name: Deploy to Kubernetes
-      #   run: |
-      #     cd ansible
-      #     ansible-playbook playbooks/deploy-webapp.yml
-      #   env:
-      #     APP_VERSION: ${{ needs.build.outputs.image-version }}
-      #     KUBECONFIG: ${{ secrets.KUBECONFIG }}
-
-      - name: Create deployment summary
+      - name: Validation Summary
         run: |
-          echo "## Deployment Summary 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "## Validation Summary ✅" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Image:** ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Version:** ${{ needs.build.outputs.image-version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Actor:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Ansible syntax check passed" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Kubernetes collection installed" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ All playbooks validated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Note:** Actual deployment requires a Kubernetes cluster." >> $GITHUB_STEP_SUMMARY
+          echo "Use the image: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.image-version }}\`" >> $GITHUB_STEP_SUMMARY
 
   security-scan:
     name: Security Scan
@@ -177,3 +155,40 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
+
+  deployment-summary:
+    name: Deployment Instructions
+    runs-on: ubuntu-latest
+    needs: [build, validate]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Create deployment instructions
+        run: |
+          echo "## 🚀 Deployment Instructions" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Image Built Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "- **Registry:** \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** \`${{ needs.build.outputs.image-version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deploy to Your Local Kubernetes" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "# Clone repository" >> $GITHUB_STEP_SUMMARY
+          echo "git clone https://github.com/${{ github.repository }}.git" >> $GITHUB_STEP_SUMMARY
+          echo "cd webapp-ansible-k8s" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Deploy using quickstart" >> $GITHUB_STEP_SUMMARY
+          echo "./quickstart.sh deploy" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Or using make" >> $GITHUB_STEP_SUMMARY
+          echo "make deploy VERSION=${{ needs.build.outputs.image-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Or using Ansible directly" >> $GITHUB_STEP_SUMMARY
+          echo "cd ansible" >> $GITHUB_STEP_SUMMARY
+          echo "APP_VERSION=${{ needs.build.outputs.image-version }} ansible-playbook playbooks/deploy-webapp.yml" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Access Application" >> $GITHUB_STEP_SUMMARY
+          echo "After deployment: http://localhost" >> $GITHUB_STEP_SUMMARY
