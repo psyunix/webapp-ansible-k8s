@@ -1,0 +1,71 @@
+---
+- name: Ensure Python kubernetes library is installed
+  pip:
+    name:
+      - kubernetes
+      - openshift
+      - PyYAML
+    state: present
+  delegate_to: localhost
+  run_once: true
+
+- name: Create namespace
+  kubernetes.core.k8s:
+    name: "{{ k8s_namespace }}"
+    api_version: v1
+    kind: Namespace
+    state: present
+    context: "{{ k8s_context }}"
+
+- name: Create ConfigMap for app configuration
+  kubernetes.core.k8s:
+    state: present
+    context: "{{ k8s_context }}"
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: "{{ app_name }}-config"
+        namespace: "{{ k8s_namespace }}"
+      data:
+        app.conf: |
+          # Application configuration
+          server_name: {{ app_name }}
+          environment: production
+
+- name: Deploy application using template
+  kubernetes.core.k8s:
+    state: present
+    context: "{{ k8s_context }}"
+    template: deployment.yml.j2
+
+- name: Create service
+  kubernetes.core.k8s:
+    state: present
+    context: "{{ k8s_context }}"
+    template: service.yml.j2
+
+- name: Wait for deployment to be ready
+  kubernetes.core.k8s_info:
+    kind: Deployment
+    namespace: "{{ k8s_namespace }}"
+    name: "{{ app_name }}"
+    context: "{{ k8s_context }}"
+  register: deployment_status
+  until: 
+    - deployment_status.resources[0].status.readyReplicas is defined
+    - deployment_status.resources[0].status.readyReplicas == replicas
+  retries: 30
+  delay: 10
+
+- name: Get service information
+  kubernetes.core.k8s_info:
+    kind: Service
+    namespace: "{{ k8s_namespace }}"
+    name: "{{ app_name }}-service"
+    context: "{{ k8s_context }}"
+  register: service_info
+
+- name: Display service access information
+  debug:
+    msg: "Application deployed successfully! Access at http://localhost:{{ service_port }}"

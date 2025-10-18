@@ -1,0 +1,43 @@
+---
+- name: Rollback Web Application Deployment
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+  tasks:
+    - name: Get deployment history
+      command: kubectl rollout history deployment/{{ app_name }} -n {{ k8s_namespace }}
+      register: rollout_history
+      changed_when: false
+
+    - name: Display rollout history
+      debug:
+        var: rollout_history.stdout_lines
+
+    - name: Confirm rollback
+      pause:
+        prompt: "Do you want to rollback to the previous version? (yes/no)"
+      register: confirm_rollback
+
+    - name: Rollback deployment
+      command: kubectl rollout undo deployment/{{ app_name }} -n {{ k8s_namespace }}
+      when: confirm_rollback.user_input | bool
+
+    - name: Wait for rollback to complete
+      command: kubectl rollout status deployment/{{ app_name }} -n {{ k8s_namespace }}
+      when: confirm_rollback.user_input | bool
+
+    - name: Get current deployment status
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        namespace: "{{ k8s_namespace }}"
+        name: "{{ app_name }}"
+        context: "{{ k8s_context }}"
+      register: deployment_info
+
+    - name: Display rollback result
+      debug:
+        msg: "Rollback completed. Current image: {{ deployment_info.resources[0].spec.template.spec.containers[0].image }}"

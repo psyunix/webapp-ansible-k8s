@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web App - K8s Deployment</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+        }
+        .container {
+            text-align: center;
+            padding: 3rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+        }
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50px;
+            margin: 0.5rem;
+            font-size: 0.9rem;
+        }
+        .info {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            text-align: left;
+        }
+        .info p {
+            margin: 0.5rem 0;
+            font-size: 1rem;
+        }
+        .status {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: rgba(76, 175, 80, 0.3);
+            border-radius: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Web App Deployed!</h1>
+        <p style="font-size: 1.2rem; margin-bottom: 2rem;">Successfully deployed with Ansible on Kubernetes</p>
+        
+        <div>
+            <span class="badge">Docker Desktop</span>
+            <span class="badge">Kubernetes</span>
+            <span class="badge">Ansible</span>
+        </div>
+
+        <div class="info">
+            <h2 style="margin-bottom: 1rem;">Deployment Info</h2>
+            <p><strong>Platform:</strong> Docker Desktop Kubernetes</p>
+            <p><strong>Orchestration:</strong> Ansible</p>
+            <p><strong>CI/CD:</strong> GitHub Actions</p>
+            <p><strong>Deployed by:</strong> psyunix</p>
+            <p><strong>Version:</strong> <span id="version">1.0.0</span></p>
+        </div>
+
+        <div class="status">
+            ✓ Application Running Successfully
+        </div>
+    </div>
+
+    <script>
+        // Display hostname and timestamp
+        document.addEventListener('DOMContentLoaded', function() {
+            const timestamp = new Date().toLocaleString();
+            console.log('Application loaded at:', timestamp);
+        });
+    </script>
+</body>
+</html>

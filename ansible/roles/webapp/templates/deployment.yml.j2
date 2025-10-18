@@ -1,0 +1,67 @@
+---
+apiVersion: {{ k8s_api_version }}
+kind: Deployment
+metadata:
+  name: {{ app_name }}
+  namespace: {{ k8s_namespace }}
+  labels:
+    app: {{ app_name }}
+    version: {{ app_version }}
+spec:
+  replicas: {{ replicas }}
+  selector:
+    matchLabels:
+      app: {{ app_name }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: {{ app_name }}
+        version: {{ app_version }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ container_port }}"
+    spec:
+      containers:
+      - name: {{ app_name }}
+        image: {{ docker_image }}:{{ app_version }}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: {{ container_port }}
+          name: http
+          protocol: TCP
+        env:
+{% for env_var in app_env_vars %}
+        - name: {{ env_var.name }}
+          value: "{{ env_var.value }}"
+{% endfor %}
+        resources:
+          requests:
+            cpu: {{ cpu_request }}
+            memory: {{ memory_request }}
+          limits:
+            cpu: {{ cpu_limit }}
+            memory: {{ memory_limit }}
+        livenessProbe:
+          httpGet:
+            path: {{ liveness_probe_path }}
+            port: {{ container_port }}
+          initialDelaySeconds: {{ liveness_probe_initial_delay }}
+          periodSeconds: {{ liveness_probe_period }}
+        readinessProbe:
+          httpGet:
+            path: {{ readiness_probe_path }}
+            port: {{ container_port }}
+          initialDelaySeconds: {{ readiness_probe_initial_delay }}
+          periodSeconds: {{ readiness_probe_period }}
+        volumeMounts:
+        - name: config
+          mountPath: /etc/config
+      volumes:
+      - name: config
+        configMap:
+          name: {{ app_name }}-config

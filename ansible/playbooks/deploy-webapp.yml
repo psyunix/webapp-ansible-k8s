@@ -1,0 +1,56 @@
+---
+- name: Deploy Web Application to Kubernetes
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+  pre_tasks:
+    - name: Verify kubectl is installed
+      command: kubectl version --client
+      register: kubectl_version
+      changed_when: false
+      failed_when: kubectl_version.rc != 0
+
+    - name: Verify Docker Desktop Kubernetes is running
+      command: kubectl cluster-info
+      register: cluster_info
+      changed_when: false
+      failed_when: cluster_info.rc != 0
+
+    - name: Display cluster information
+      debug:
+        var: cluster_info.stdout_lines
+
+  roles:
+    - webapp
+
+  post_tasks:
+    - name: Get all pods in namespace
+      kubernetes.core.k8s_info:
+        kind: Pod
+        namespace: "{{ k8s_namespace }}"
+        context: "{{ k8s_context }}"
+      register: pods
+
+    - name: Display pod information
+      debug:
+        msg: "Pod {{ item.metadata.name }} is {{ item.status.phase }}"
+      loop: "{{ pods.resources }}"
+      loop_control:
+        label: "{{ item.metadata.name }}"
+
+    - name: Deployment Summary
+      debug:
+        msg:
+          - "======================================"
+          - "Deployment Completed Successfully!"
+          - "======================================"
+          - "Application: {{ app_name }}"
+          - "Version: {{ app_version }}"
+          - "Namespace: {{ k8s_namespace }}"
+          - "Replicas: {{ replicas }}"
+          - "Access URL: http://localhost:{{ service_port }}"
+          - "======================================"

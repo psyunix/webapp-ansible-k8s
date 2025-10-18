@@ -1,0 +1,38 @@
+---
+# Application Configuration
+app_name: webapp
+app_version: "{{ lookup('env', 'APP_VERSION') | default('latest', true) }}"
+docker_registry: ghcr.io
+docker_image: "{{ docker_registry }}/psyunix/{{ app_name }}"
+
+# Kubernetes Configuration
+k8s_namespace: webapp
+k8s_context: docker-desktop
+k8s_api_version: apps/v1
+
+# Deployment Configuration
+replicas: 2
+container_port: 80
+service_port: 80
+service_type: LoadBalancer
+
+# Resource Limits
+cpu_request: "100m"
+cpu_limit: "500m"
+memory_request: "128Mi"
+memory_limit: "512Mi"
+
+# Health Checks
+liveness_probe_path: /
+liveness_probe_initial_delay: 30
+liveness_probe_period: 10
+readiness_probe_path: /
+readiness_probe_initial_delay: 5
+readiness_probe_period: 5
+
+# Environment Variables for the App
+app_env_vars:
+  - name: ENVIRONMENT
+    value: "production"
+  - name: LOG_LEVEL
+    value: "info"
