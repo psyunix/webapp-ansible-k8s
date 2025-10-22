@@ -6,6 +6,21 @@
 
 set -e  # Exit on error
 
+# Global variable for port-forward PID
+PF_PID=""
+
+# Cleanup function
+cleanup() {
+    if [[ -n "$PF_PID" ]] && kill -0 "$PF_PID" 2>/dev/null; then
+        echo -e "\n${YELLOW}Cleaning up port-forward process...${NC}"
+        kill "$PF_PID" 2>/dev/null || true
+        wait "$PF_PID" 2>/dev/null || true
+    fi
+}
+
+# Set up signal traps
+trap cleanup EXIT INT TERM
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -236,22 +251,35 @@ test_deployment() {
     
     print_info "Testing application health..."
     
-    # Port forward in background
-    kubectl port-forward -n ${NAMESPACE} svc/${APP_NAME}-service 8888:80 > /dev/null 2>&1 &
+    # Check if service exists first
+    if ! kubectl get svc -n ${NAMESPACE} ${APP_NAME}-service &>/dev/null; then
+        print_warning "Service ${APP_NAME}-service not found in namespace ${NAMESPACE}"
+        return 1
+    fi
+    
+    # Port forward in background with better error handling
+    kubectl port-forward -n ${NAMESPACE} svc/${APP_NAME}-service 8888:80 > /tmp/pf.log 2>&1 &
     PF_PID=$!
     
-    # Wait a moment for port forward to establish
+    # Wait a moment for port forward to establish and check if it's still running
     sleep 3
+    if ! kill -0 $PF_PID 2>/dev/null; then
+        print_warning "Port forward failed to establish. Check /tmp/pf.log for details"
+        return 1
+    fi
     
     # Test HTTP endpoint
     if curl -s http://localhost:8888 > /dev/null; then
         print_success "Application is responding to HTTP requests"
     else
-        print_warning "Could not reach application"
+        print_warning "Could not reach application on localhost:8888"
     fi
     
     # Kill port forward
-    kill $PF_PID 2>/dev/null || true
+    if kill -0 $PF_PID 2>/dev/null; then
+        kill $PF_PID 2>/dev/null || true
+        wait $PF_PID 2>/dev/null || true
+    fi
     
     echo ""
 }
