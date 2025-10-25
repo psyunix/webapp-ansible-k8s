@@ -4,8 +4,11 @@ set -e
 export PATH=/usr/local/bin:/opt/homebrew/bin:$PATH
 cd /Users/psyunix/Documents/git/claude/ansible/webapp-ansible-k8s
 
-echo '🔨 Building Docker image...'
+echo '🔨 Building Docker image locally...'
 docker build -t webapp:latest ./app
+
+echo '📋 Verifying image exists...'
+docker images | grep webapp
 
 echo ''
 echo '🚀 Deploying to Kubernetes with Ansible...'
