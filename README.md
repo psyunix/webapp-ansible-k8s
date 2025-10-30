@@ -7,7 +7,7 @@ Complete automation workflow for deploying web applications to Kubernetes using 
 ## 🚀 Quick Start
 
 ```bash
-# Clone repository
+# Clone repository test
 git clone https://github.com/psyunix/webapp-ansible-k8s.git
 cd webapp-ansible-k8s
 
