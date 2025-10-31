@@ -230,12 +230,20 @@ build_image() {
     # Check if image already exists
     if [[ "$SKIP_IMAGE_CHECK" != "true" ]] && docker images --format "{{.Repository}}:{{.Tag}}" | grep -q "^${image_tag}$"; then
         print_warning "Image ${image_tag} already exists locally"
-        read -p "Rebuild image? (y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            print_info "Skipping image build"
-            log_message "Image build skipped - image already exists"
-            return 0
+        
+        # Only prompt in interactive mode
+        if [[ -t 0 ]]; then
+            read -p "Rebuild image? (y/N): " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                print_info "Skipping image build"
+                log_message "Image build skipped - image already exists"
+                return 0
+            fi
+        else
+            # Non-interactive mode: rebuild by default
+            print_info "Non-interactive mode detected - rebuilding image"
+            log_message "Non-interactive mode: rebuilding existing image"
         fi
     fi
     
@@ -730,16 +738,32 @@ EOF
         "clean")
             print_header "Cleaning Up"
             print_warning "This will delete the ${NAMESPACE} namespace and all resources"
+            
             if [[ "$DRY_RUN" == "true" ]]; then
                 print_info "[DRY RUN] Would delete namespace ${NAMESPACE}"
             else
-                read -p "Are you sure? (yes/no): " confirm
-                if [ "$confirm" == "yes" ]; then
-                    kubectl delete namespace ${NAMESPACE} --ignore-not-found=true
-                    print_success "Cleanup complete"
-                    log_message "Namespace ${NAMESPACE} deleted"
+                # Only prompt in interactive mode
+                if [[ -t 0 ]]; then
+                    read -p "Are you sure? (yes/no): " confirm
+                    if [ "$confirm" == "yes" ]; then
+                        kubectl delete namespace ${NAMESPACE} --ignore-not-found=true
+                        print_success "Cleanup complete"
+                        log_message "Namespace ${NAMESPACE} deleted"
+                    else
+                        print_info "Cleanup cancelled"
+                    fi
                 else
-                    print_info "Cleanup cancelled"
+                    # Non-interactive mode: require explicit confirmation via environment variable
+                    if [[ "${FORCE_CLEAN:-no}" == "yes" ]]; then
+                        print_info "Non-interactive mode: FORCE_CLEAN=yes detected - proceeding with cleanup"
+                        kubectl delete namespace ${NAMESPACE} --ignore-not-found=true
+                        print_success "Cleanup complete"
+                        log_message "Namespace ${NAMESPACE} deleted"
+                    else
+                        print_error "Non-interactive mode: Cleanup requires FORCE_CLEAN=yes environment variable"
+                        print_info "To force cleanup in non-interactive mode, run: FORCE_CLEAN=yes ./quickstart.sh clean"
+                        exit 1
+                    fi
                 fi
             fi
             ;;
