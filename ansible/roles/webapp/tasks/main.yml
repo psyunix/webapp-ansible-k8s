@@ -19,6 +19,21 @@
     state: present
     context: "{{ k8s_context }}"
 
+- name: Create GHCR image pull secret
+  kubernetes.core.k8s:
+    state: present
+    context: "{{ k8s_context }}"
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: ghcr-secret
+        namespace: "{{ k8s_namespace }}"
+      type: kubernetes.io/dockerconfigjson
+      data:
+        .dockerconfigjson: "{{ lookup('env', 'GHCR_DOCKER_CONFIG') | default('e30K', true) }}"
+  when: lookup('env', 'GHCR_DOCKER_CONFIG') | default('', true) | length > 0
+
 - name: Create ConfigMap for app configuration
   kubernetes.core.k8s:
     state: present

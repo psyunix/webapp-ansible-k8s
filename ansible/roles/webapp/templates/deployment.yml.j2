@@ -26,6 +26,8 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "{{ container_port }}"
     spec:
+      imagePullSecrets:
+      - name: ghcr-secret
       containers:
       - name: {{ app_name }}
         image: {{ docker_image }}:{{ app_version }}

@@ -161,9 +161,42 @@ build_image() {
     
     print_info "Building ${REGISTRY}/${APP_NAME}:${VERSION}..."
     cd app
-    docker build -t ${REGISTRY}/${APP_NAME}:${VERSION} . --quiet
+    docker build -t ${REGISTRY}/${APP_NAME}:${VERSION} .
     cd ..
     print_success "Docker image built successfully"
+    
+    echo ""
+}
+
+# Push Docker image to registry
+push_image() {
+    print_header "Pushing Docker Image to GHCR"
+    
+    # Check if logged in to GHCR
+    if ! docker info 2>/dev/null | grep -q "ghcr.io"; then
+        print_warning "Not logged in to GitHub Container Registry"
+        print_info "You need to login first. Run: ./scripts/ghcr-setup.sh login"
+        print_info "Or set GITHUB_TOKEN and run: echo \$GITHUB_TOKEN | docker login ghcr.io -u psyunix --password-stdin"
+        
+        read -p "Do you want to push to GHCR? (yes/no): " push_confirm
+        if [ "$push_confirm" != "yes" ]; then
+            print_warning "Skipping push to GHCR. Image will only be available locally."
+            return 0
+        fi
+        
+        if [ -n "$GITHUB_TOKEN" ]; then
+            print_info "Logging in to GHCR using GITHUB_TOKEN..."
+            echo "$GITHUB_TOKEN" | docker login ghcr.io -u psyunix --password-stdin
+        else
+            print_error "GITHUB_TOKEN not set. Cannot push to GHCR."
+            print_info "Export GITHUB_TOKEN or run: ./scripts/ghcr-setup.sh login"
+            return 1
+        fi
+    fi
+    
+    print_info "Pushing ${REGISTRY}/${APP_NAME}:${VERSION}..."
+    docker push ${REGISTRY}/${APP_NAME}:${VERSION}
+    print_success "Docker image pushed successfully"
     
     echo ""
 }
@@ -309,11 +342,16 @@ EOF
             build_image
             print_success "Build complete!"
             ;;
+        "push")
+            push_image
+            print_success "Push complete!"
+            ;;
         "deploy")
             check_prerequisites
             setup_python_env
             verify_ansible
             build_image
+            push_image
             deploy_app
             wait_for_deployment
             show_status
@@ -347,7 +385,8 @@ EOF
             echo "Commands:"
             echo "  setup    - Setup Python environment and dependencies"
             echo "  build    - Build Docker image only"
-            echo "  deploy   - Full deployment (default)"
+            echo "  push     - Push Docker image to GHCR"
+            echo "  deploy   - Full deployment (build, push, deploy)"
             echo "  status   - Show deployment status"
             echo "  test     - Test application health"
             echo "  logs     - Stream application logs"
